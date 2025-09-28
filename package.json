@@ -1,0 +1,17 @@
+{
+  "name": "captcha-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "captcha-canvas": "^3.3.4",
+    "discord.js": "^14.22.1",
+    "dotenv": "^17.2.2"
+  }
+}
