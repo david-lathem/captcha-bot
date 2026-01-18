@@ -12,7 +12,7 @@ const {
   Events,
 } = require("discord.js");
 
-const { CaptchaGenerator } = require("captcha-canvas");
+const svgCaptcha = require("svg-captcha"); // ✅ alternate captcha
 const fs = require("fs");
 
 const client = new Client({
@@ -35,9 +35,7 @@ client.once("ready", () => {
 client.on("messageCreate", async (message) => {
   try {
     if (message.author.bot) return;
-
     if (!message.guild) return;
-
     if (message.content !== `${PREFIX}sendVerify`) return;
 
     if (!message.member.permissions.has("Administrator"))
@@ -46,7 +44,7 @@ client.on("messageCreate", async (message) => {
     const embed = new EmbedBuilder()
       .setTitle("✅ Verify Yourself")
       .setDescription(
-        `Welcome to **${message.guild.name}**!\n\nClick the button below to prove you are human.`
+        `Welcome to **${message.guild.name}**!\n\nClick the button below to prove you are human.`,
       )
       .addFields({
         name: "🛡️ Why Verification?",
@@ -72,20 +70,34 @@ client.on("messageCreate", async (message) => {
 // --- BUTTON HANDLER ---
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isButton() && interaction.customId === "start_verify") {
-    const captcha = new CaptchaGenerator();
-    const buffer = await captcha.generate();
+    // --- Generate captcha using svg-captcha ---
+
+    const captcha = svgCaptcha.create({
+      size: 5, // 5 characters
+      ignoreChars: "0O1Il", // avoid confusing letters/numbers
+      noise: 1, // just a little noise
+      color: true, // colorful text
+      background: "#f0f0f0", // light gray background
+      width: 200, // wider
+      height: 80, // taller
+      fontSize: 60, // bigger font
+    });
+
+    // Convert SVG to PNG buffer
+    const svg2img = require("svg2img");
+    const buffer = await new Promise((resolve, reject) => {
+      svg2img(captcha.data, { width: 200, height: 80 }, (error, buffer) => {
+        if (error) reject(error);
+        else resolve(buffer);
+      });
+    });
 
     console.log(captcha.text);
-
-    // Save answer
     captchaAnswers.set(interaction.user.id, captcha.text);
 
-    // Send captcha image
     const captchaEmbed = new EmbedBuilder()
       .setTitle("🧩 CAPTCHA Challenge")
-      .setDescription(
-        "Enter the text represented by the green line. (Ignore letters that are outside of the line)"
-      )
+      .setDescription("Enter the text shown in the image.")
       .setColor("Yellow")
       .setImage("attachment://captcha.png");
 
@@ -119,18 +131,18 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     await interaction.showModal(modal);
   }
+
   // --- MODAL HANDLER ---
   if (interaction.isModalSubmit() && interaction.customId === "captcha_modal") {
     const userInput = interaction.fields.getTextInputValue("captcha_input");
     const logChannel = interaction.guild.channels.cache.get(
-      process.env.LOG_CHANNEL_ID
+      process.env.LOG_CHANNEL_ID,
     );
 
     try {
       const correctAnswer = captchaAnswers.get(interaction.user.id);
 
       if (userInput !== correctAnswer) {
-        // ❌ Failed verification
         await interaction.update({
           content: "❌ Incorrect CAPTCHA. Please try again.",
           embeds: [],
@@ -177,7 +189,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         const successEmbed = new EmbedBuilder()
           .setTitle("✅ User Verified")
           .setDescription(
-            `<@${interaction.user.id}> has been verified successfully.`
+            `<@${interaction.user.id}> has been verified successfully.`,
           )
           .setColor("Green")
           .setTimestamp();
