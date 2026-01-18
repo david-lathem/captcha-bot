@@ -69,7 +69,11 @@ client.on("messageCreate", async (message) => {
 
 // --- BUTTON HANDLER ---
 client.on(Events.InteractionCreate, async (interaction) => {
+  try {
+    
   if (interaction.isButton() && interaction.customId === "start_verify") {
+
+    await interaction.deferReply( { ephemeral : true } );
     // --- Generate captcha using svg-captcha ---
 
     const captcha = svgCaptcha.create({
@@ -108,11 +112,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     const row = new ActionRowBuilder().addComponents(submitButton);
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [captchaEmbed],
-      files: [{ attachment: buffer, name: "captcha.png" }],
-      components: [row],
-      ephemeral: true,
+      files: [ { attachment: buffer, name: "captcha.png" } ],
+      components: [row]
     });
   }
 
@@ -139,7 +142,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       process.env.LOG_CHANNEL_ID,
     );
 
-    try {
+
       const correctAnswer = captchaAnswers.get(interaction.user.id);
 
       if (userInput !== correctAnswer) {
@@ -196,9 +199,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         await logChannel.send({ embeds: [successEmbed] });
       }
-    } catch (error) {
-      console.log(error);
-    }
+   
+  }
+  } catch (e){
+    console.error(e)
   }
 });
 
